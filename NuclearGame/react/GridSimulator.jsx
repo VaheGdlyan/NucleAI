@@ -19,7 +19,7 @@ function metricCardClass(state) {
 }
 
 /**
- * Page 1: The Grid — Armenia energy mix simulator (HackAtom Armenia 2026).
+ * Page 1: The Grid — Armenia energy mix simulator (HackAtom 2026 National Stage).
  */
 export default function GridSimulator({
   className = "",
@@ -300,7 +300,7 @@ export default function GridSimulator({
 
         {showFooter && (
           <footer className="grid-footer">
-            HackAtom Armenia 2026 · Metsamor ~29% of generation (2025) · IAEA
+            HackAtom 2026 National Stage · Metsamor ~29% of generation (2025) · IAEA
             lifecycle data
           </footer>
         )}

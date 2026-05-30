@@ -544,8 +544,6 @@ python -m http.server 3000
 
 **No retrieval validation.** The system returns the top-4 cosine similarity results without a relevance threshold or reranking step. A query sufficiently distant from the corpus may surface marginally relevant passages that nonetheless appear in the response context.
 
-**Single-language corpus.** Source documents are in English. Armenian-language queries may produce suboptimal retrieval results due to cross-lingual embedding alignment limitations of `text-embedding-3-small`.
-
 **Simulation model scope.** The grid simulation engine models Armenia's grid at an abstracted level. It does not account for transmission losses, demand-side variability, seasonal hydro fluctuations, or actual dispatch economics. The coefficients are calibrated to produce directionally correct intuitions rather than engineering-grade forecasts.
 
 **No persistent conversation history.** The Mythbuster chatbot maintains conversation history in Streamlit session state only. History is lost on page reload and is not passed to the language model as context across sessions.
@@ -560,8 +558,6 @@ python -m http.server 3000
 
 **Relevance filtering.** Introducing a minimum similarity threshold for retrieved passages — with explicit fallback behavior when no passage meets the threshold — would reduce the risk of low-relevance context contaminating generated responses.
 
-**Multilingual support.** Adding Armenian-language source documents and evaluating multilingual embedding models (e.g., `text-embedding-3-large` or open-weight multilingual encoders) would extend accessibility to Armenian-speaking audiences.
-
 **Expanded corpus.** The current 10-document corpus covers foundational material. Systematic expansion to include IAEA technical reports, IRRS mission reports for additional countries, and peer-reviewed radiation epidemiology literature would broaden the system's factual coverage.
 
 **Simulator calibration.** Grounding simulation coefficients against Armenian Statistical Committee generation data and ENTSO-E grid stability metrics would increase the quantitative accuracy of the energy model.
@@ -572,7 +568,12 @@ python -m http.server 3000
 
 ## Contributors
 
-This project was developed by **Vahe Gdlyan** and **Tigran** for HackAtom Armenia 2025/2026.
+This project was developed by **Vahe Gdlyan** and [Tigran Badalyan](https://github.com/tigranbadalyan-ai/tigranbadalyan-ai) for the **HackAtom 2026 National Stage**.
+
+### Connect with the Authors
+
+- **Vahe Gdlyan**: [LinkedIn](https://www.linkedin.com/in/vahe-gdlyan-1415873a7/) | [Medium](https://medium.com/@gdlyanvahe31)
+- **Tigran Badalyan**: [GitHub](https://github.com/tigranbadalyan-ai/tigranbadalyan-ai)
 
 Contributions, issue reports, and pull requests are welcome. Please open an issue before submitting significant changes to discuss approach and scope.
 
@@ -586,6 +587,6 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for the f
 
 <div align="center">
 
-Built for HackAtom Armenia 2025/2026 · Grounded in IAEA documentation · Open source
+Built for the HackAtom 2026 National Stage · Grounded in IAEA documentation · Open source
 
 </div>

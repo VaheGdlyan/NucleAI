@@ -47,7 +47,7 @@ except Exception as e:
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are NuclearGuide, an expert AI assistant for HackAtom Armenia 2025.
+SYSTEM_PROMPT = """You are NuclearGuide, an expert AI assistant for the HackAtom 2026 National Stage.
 You specialize in nuclear energy, radiation safety, and Armenia's energy future.
 
 Your knowledge strictly comes from the provided context (IAEA documents and verified Armenian energy statistics).
@@ -83,7 +83,7 @@ relevant to the question, use them. Keep the answer focused and helpful.
 # ── FastAPI app ───────────────────────────────────────────────────────────────
 app = FastAPI(
     title="The Nuclear Hub API",
-    description="AI & Data backend for The Nuclear Hub — HackAtom 2025",
+    description="AI & Data backend for The Nuclear Hub — HackAtom 2026 National Stage",
     version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
