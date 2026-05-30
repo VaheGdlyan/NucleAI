@@ -1,0 +1,1701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Grid Commander — Energy Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --md-surface: #12141a;
+      --md-surface-container: #1c1f28;
+      --md-surface-high: #262a36;
+      --md-on-surface: #e8eaef;
+      --md-on-surface-variant: #9aa3b5;
+      --md-primary: #7cacf8;
+      --md-primary-container: #1a3a6e;
+      --md-secondary: #b8c5d9;
+      --md-outline: #3d4455;
+      --md-error: #ff6b6b;
+      --md-success: #4ade80;
+      --md-warning: #fbbf24;
+      --glow: rgba(124, 172, 248, 0.15);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --shadow-elevated: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+      --font-display: "Outfit", system-ui, sans-serif;
+      --font-body: "DM Sans", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--md-surface);
+      color: var(--md-on-surface);
+      min-height: 100vh;
+      line-height: 1.5;
+      overflow-x: hidden;
+    }
+
+    .bg-mesh {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 50% at 20% -10%, rgba(124, 172, 248, 0.18), transparent),
+        radial-gradient(ellipse 60% 40% at 90% 20%, rgba(74, 222, 128, 0.08), transparent),
+        radial-gradient(ellipse 50% 30% at 50% 100%, rgba(251, 191, 36, 0.06), transparent),
+        var(--md-surface);
+      pointer-events: none;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 2.5rem;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.75rem;
+    }
+
+    .brand h1 {
+      font-family: var(--font-display);
+      font-size: clamp(1.6rem, 4vw, 2.1rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #fff 0%, var(--md-primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .brand p {
+      color: var(--md-on-surface-variant);
+      font-size: 0.95rem;
+      margin-top: 0.25rem;
+      max-width: 32rem;
+    }
+
+    .budget-pill {
+      min-width: 220px;
+      background: var(--md-surface-container);
+      border: 1px solid var(--md-outline);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      box-shadow: var(--shadow-elevated);
+    }
+
+    .budget-pill.budget-full {
+      border-color: var(--md-warning);
+      box-shadow: 0 0 20px rgba(251, 191, 36, 0.12);
+    }
+
+    .budget-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .budget-pill .label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--md-on-surface-variant);
+    }
+
+    .budget-pill .amount {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: var(--md-success);
+    }
+
+    .budget-pill .spent {
+      font-size: 0.72rem;
+      color: var(--md-on-surface-variant);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .budget-bar {
+      height: 6px;
+      background: var(--md-surface-high);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .budget-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--md-primary), var(--md-success));
+      border-radius: 3px;
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      max-width: 100%;
+    }
+
+    .budget-bar-fill.full { background: var(--md-warning); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+      .advisor-panel { order: -1; }
+    }
+
+    .main-col { display: flex; flex-direction: column; gap: 1.25rem; }
+
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    @media (max-width: 600px) {
+      .source-grid { grid-template-columns: 1fr; }
+    }
+
+    .source-card {
+      background: var(--md-surface-container);
+      border: 1px solid var(--md-outline);
+      border-radius: var(--radius-lg);
+      padding: 1.15rem 1.2rem;
+      transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
+    }
+
+    .source-card:hover {
+      border-color: color-mix(in srgb, var(--source-color) 50%, var(--md-outline));
+      box-shadow: 0 0 24px color-mix(in srgb, var(--source-color) 12%, transparent);
+    }
+
+    .source-card.active {
+      border-color: var(--source-color);
+      box-shadow: 0 0 28px color-mix(in srgb, var(--source-color) 20%, transparent);
+    }
+
+    .source-header {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .source-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-sm);
+      background: color-mix(in srgb, var(--source-color) 15%, var(--md-surface-high));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.3s, box-shadow 0.3s;
+    }
+
+    .source-card.active .source-logo {
+      background: color-mix(in srgb, var(--source-color) 28%, var(--md-surface-high));
+      box-shadow: 0 0 16px color-mix(in srgb, var(--source-color) 35%, transparent);
+    }
+
+    .source-logo svg { width: 36px; height: 36px; }
+
+    .source-illustration {
+      position: relative;
+      width: 100%;
+      height: 88px;
+      margin-bottom: 0.85rem;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid var(--md-outline);
+      background: var(--md-surface-high);
+    }
+
+    .source-illustration svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .source-illustration .art-layer {
+      position: absolute;
+      inset: 0;
+      transition: opacity 0.45s ease, transform 0.45s ease;
+    }
+
+    .source-illustration .art-idle { opacity: 1; transform: scale(1); }
+    .source-illustration .art-acquired { opacity: 0; transform: scale(1.04); }
+    .source-card.active .source-illustration .art-idle { opacity: 0; transform: scale(0.96); }
+    .source-card.active .source-illustration .art-acquired { opacity: 1; transform: scale(1); }
+    .source-card.active .source-illustration {
+      border-color: color-mix(in srgb, var(--source-color) 55%, var(--md-outline));
+      box-shadow: 0 0 20px color-mix(in srgb, var(--source-color) 18%, transparent);
+    }
+
+    .energy-gallery {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+    }
+
+    @media (max-width: 900px) {
+      .energy-gallery { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    @media (max-width: 480px) {
+      .energy-gallery { grid-template-columns: 1fr; }
+    }
+
+    .facility-panel {
+      background: var(--md-surface-container);
+      border: 1px solid var(--md-outline);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: border-color 0.35s, box-shadow 0.35s, transform 0.25s;
+    }
+
+    .facility-panel.acquired {
+      border-color: var(--facility-color, var(--md-primary));
+      box-shadow: 0 0 24px color-mix(in srgb, var(--facility-color) 22%, transparent);
+      transform: translateY(-2px);
+    }
+
+    .facility-art {
+      height: 72px;
+      line-height: 0;
+      background: var(--md-surface-high);
+    }
+
+    .facility-art svg { width: 100%; height: 72px; display: block; }
+
+    .facility-label {
+      display: block;
+      padding: 0.45rem 0.65rem 0.15rem;
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .facility-status {
+      display: block;
+      padding: 0 0.65rem 0.5rem;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--md-on-surface-variant);
+    }
+
+    .facility-panel.acquired .facility-status {
+      color: var(--facility-color, var(--md-success));
+      font-weight: 600;
+    }
+
+    .gallery-wrap {
+      background: var(--md-surface-container);
+      border: 1px solid var(--md-outline);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.1rem 1.1rem;
+    }
+
+    .source-meta h3 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .source-meta .tagline {
+      font-size: 0.75rem;
+      color: var(--md-on-surface-variant);
+    }
+
+    .source-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      color: var(--md-on-surface-variant);
+      margin-bottom: 0.75rem;
+    }
+
+    .source-stats strong {
+      color: var(--md-on-surface);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .unit-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .unit-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      border: 1px solid var(--md-outline);
+      background: var(--md-surface-high);
+      color: var(--md-on-surface);
+      font-size: 1.25rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+
+    .unit-btn:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--source-color) 25%, var(--md-surface-high));
+      border-color: var(--source-color);
+    }
+
+    .unit-btn:active:not(:disabled) { transform: scale(0.94); }
+
+    .unit-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    .unit-count {
+      font-family: var(--font-display);
+      font-size: 1.75rem;
+      font-weight: 700;
+      min-width: 2.5rem;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      color: var(--source-color);
+    }
+
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+    }
+
+    @media (max-width: 768px) {
+      .metrics-row { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .metric-tile {
+      background: var(--md-surface-container);
+      border: 1px solid var(--md-outline);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .metric-tile .label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--md-on-surface-variant);
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-tile .value {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .metric-tile .sub {
+      font-size: 0.72rem;
+      color: var(--md-on-surface-variant);
+      margin-top: 0.15rem;
+    }
+
+    .metric-tile.state-good { border-color: var(--md-success); box-shadow: 0 0 20px rgba(74, 222, 128, 0.12); }
+    .metric-tile.state-good .value { color: var(--md-success); }
+    .metric-tile.state-warn { border-color: var(--md-warning); box-shadow: 0 0 20px rgba(251, 191, 36, 0.1); }
+    .metric-tile.state-warn .value { color: var(--md-warning); }
+    .metric-tile.state-bad {
+      border-color: var(--md-error);
+      box-shadow: 0 0 20px rgba(255, 107, 107, 0.15);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .metric-tile.state-bad .value { color: var(--md-error); }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(255, 107, 107, 0.15); }
+      50% { box-shadow: 0 0 32px rgba(255, 107, 107, 0.35); }
+    }
+
+    .mix-section {
+      background: var(--md-surface-container);
+      border: 1px solid var(--md-outline);
+      border-radius: var(--radius-lg);
+      padding: 1.15rem 1.25rem;
+    }
+
+    .section-title {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--md-on-surface-variant);
+      margin-bottom: 0.75rem;
+    }
+
+    .mix-bar {
+      height: 12px;
+      display: flex;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--md-surface-high);
+    }
+
+    .mix-seg { transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1); min-width: 2px; }
+
+    .mix-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem 1.25rem;
+      margin-top: 0.6rem;
+      font-size: 0.72rem;
+      color: var(--md-on-surface-variant);
+    }
+
+    .mix-legend .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+
+    .preset-btn {
+      background: transparent;
+      border: 1px solid var(--md-outline);
+      color: var(--md-on-surface-variant);
+      padding: 0.4rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .preset-btn:hover {
+      border-color: var(--md-primary);
+      color: var(--md-primary);
+      background: var(--glow);
+    }
+
+    .advisor-panel {
+      position: sticky;
+      top: 1rem;
+      background: var(--md-surface-container);
+      border: 1px solid var(--md-outline);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-elevated);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .score-ring-wrap {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+
+    .score-ring {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+
+    .score-ring circle {
+      fill: none;
+      stroke-width: 8;
+      stroke-linecap: round;
+    }
+
+    .score-ring .track { stroke: var(--md-surface-high); }
+    .score-ring .fill {
+      stroke: var(--md-primary);
+      transition: stroke-dashoffset 0.5s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s;
+    }
+
+    .score-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-center .grade {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .score-center .pts {
+      font-size: 0.7rem;
+      color: var(--md-on-surface-variant);
+    }
+
+    .character-wrap {
+      width: 160px;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .character-wrap svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .character-wrap[data-mood="celebrate"] svg { animation: bounce 0.6s ease; }
+    .character-wrap[data-mood="alert"] svg { animation: shake 0.5s ease; }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-12px); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    .advisor-bubble {
+      width: 100%;
+      background: var(--md-surface-high);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1rem;
+      font-size: 0.88rem;
+      line-height: 1.45;
+      position: relative;
+    }
+
+    .advisor-bubble::before {
+      content: "";
+      position: absolute;
+      top: -8px;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 8px solid transparent;
+      border-bottom-color: var(--md-surface-high);
+    }
+
+    .score-breakdown {
+      width: 100%;
+      font-size: 0.75rem;
+    }
+
+    .score-breakdown .row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.3rem 0;
+      color: var(--md-on-surface-variant);
+      border-bottom: 1px solid var(--md-outline);
+    }
+
+    .score-breakdown .row:last-child { border-bottom: none; }
+    .score-breakdown .row span:last-child {
+      color: var(--md-on-surface);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    footer {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--md-on-surface-variant);
+    }
+
+    footer a { color: var(--md-primary); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh" aria-hidden="true"></div>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <h1>Grid Commander</h1>
+        <p>You have <strong>$1,000,000</strong> to build Armenia's next power mix. Spend wisely — you cannot go over budget. Score rewards output, low emissions, stability, and <strong>diversification</strong>.</p>
+      </div>
+      <div class="budget-pill" id="budget-pill">
+        <div class="budget-row">
+          <div>
+            <div class="label">Remaining</div>
+            <div class="amount" id="budget-remaining">$1,000,000</div>
+          </div>
+          <div class="spent" id="budget-spent">$0 spent</div>
+        </div>
+        <div class="budget-bar" aria-hidden="true">
+          <div class="budget-bar-fill" id="budget-bar-fill" style="width: 0%"></div>
+        </div>
+      </div>
+    </header>
+
+    <div class="layout">
+      <div class="main-col">
+        <div class="gallery-wrap">
+          <div class="section-title">Your power fleet</div>
+          <div class="energy-gallery" id="energy-gallery"></div>
+        </div>
+
+        <div class="source-grid" id="source-grid"></div>
+
+        <div class="metrics-row">
+          <div class="metric-tile" id="tile-output">
+            <div class="label">Annual output</div>
+            <div class="value" id="val-output">0</div>
+            <div class="sub">GWh / year</div>
+          </div>
+          <div class="metric-tile" id="tile-stability">
+            <div class="label">Grid stability</div>
+            <div class="value" id="val-stability">—</div>
+            <div class="sub">%</div>
+          </div>
+          <div class="metric-tile" id="tile-co2">
+            <div class="label">CO₂ emissions</div>
+            <div class="value" id="val-co2">—</div>
+            <div class="sub">tons / hour</div>
+          </div>
+          <div class="metric-tile" id="tile-capacity">
+            <div class="label">Installed capacity</div>
+            <div class="value" id="val-capacity">0</div>
+            <div class="sub">MW total</div>
+          </div>
+        </div>
+
+        <div class="mix-section">
+          <div class="section-title">Resulting generation mix</div>
+          <div class="mix-bar" id="mix-bar"></div>
+          <div class="mix-legend" id="mix-legend"></div>
+        </div>
+
+        <div>
+          <div class="section-title" style="margin-bottom:0.5rem">Quick strategies</div>
+          <div class="presets" id="presets"></div>
+        </div>
+      </div>
+
+      <aside class="advisor-panel">
+        <div class="score-ring-wrap">
+          <svg class="score-ring" viewBox="0 0 120 120">
+            <circle class="track" cx="60" cy="60" r="52" />
+            <circle class="fill" id="score-ring-fill" cx="60" cy="60" r="52"
+              stroke-dasharray="326.7" stroke-dashoffset="326.7" />
+          </svg>
+          <div class="score-center">
+            <span class="grade" id="score-grade">—</span>
+            <span class="pts" id="score-pts">0 pts</span>
+          </div>
+        </div>
+
+        <div class="character-wrap" id="character" data-mood="idle">
+          <svg viewBox="0 0 120 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <defs>
+              <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#7cacf8"/>
+                <stop offset="100%" style="stop-color:#4a7fd4"/>
+              </linearGradient>
+            </defs>
+            <ellipse cx="60" cy="118" rx="38" ry="8" fill="rgba(0,0,0,0.25)"/>
+            <rect x="28" y="72" width="64" height="48" rx="16" fill="url(#bodyGrad)"/>
+            <circle cx="60" cy="52" r="36" fill="url(#bodyGrad)"/>
+            <ellipse id="eye-left" cx="46" cy="48" rx="6" ry="6" fill="#1a1f2e"/>
+            <ellipse id="eye-right" cx="74" cy="48" rx="6" ry="6" fill="#1a1f2e"/>
+            <circle id="pupil-left" cx="48" cy="48" r="2.5" fill="#fff"/>
+            <circle id="pupil-right" cx="76" cy="48" r="2.5" fill="#fff"/>
+            <path id="mouth" d="M 48 62 Q 60 68 72 62" fill="none" stroke="#1a1f2e" stroke-width="3" stroke-linecap="round"/>
+            <rect x="52" y="88" width="16" height="4" rx="2" fill="rgba(255,255,255,0.3)"/>
+          </svg>
+        </div>
+
+        <div class="advisor-bubble" id="advisor-text">Allocate your $1M budget to build the grid.</div>
+
+        <div class="score-breakdown">
+          <div class="row"><span>Output</span><span id="bd-output">0 / 25</span></div>
+          <div class="row"><span>Emissions</span><span id="bd-emission">0 / 25</span></div>
+          <div class="row"><span>Stability</span><span id="bd-stability">0 / 25</span></div>
+          <div class="row"><span>Diversification</span><span id="bd-diversify">0 / 25</span></div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      HackAtom Armenia 2026 · IAEA lifecycle CO₂ data
+    </footer>
+  </div>
+
+  <script>
+    // --- INLINED GRID ENGINE LOGIC ---
+    function calculateStability(nuclear, solar, hydro, fossil) {
+      let stability = 30 + nuclear * 0.65 + fossil * 0.3 + hydro * 0.35;
+
+      if (solar > 40) {
+        stability -= (solar - 40) * 1.8;
+      }
+
+      if (nuclear >= 30 && solar > 40) {
+        stability += nuclear * 0.25;
+      }
+
+      if (
+        nuclear >= 50 &&
+        solar >= 20 &&
+        solar <= 45 &&
+        hydro >= 5 &&
+        fossil > 0 &&
+        fossil <= 15
+      ) {
+        stability += 15;
+      }
+
+      return Math.round(Math.max(0, Math.min(100, stability)));
+    }
+
+    function calculateCO2(nuclear, solar, hydro, fossil) {
+      const fossilCO2 = fossil * 0.01 * 650;
+      const solarCO2 = solar * 0.01 * 48;
+      const hydroCO2 = hydro * 0.01 * 24;
+      const nuclearCO2 = nuclear * 0.01 * 12;
+      const totalGCO2perKwh = fossilCO2 + solarCO2 + hydroCO2 + nuclearCO2;
+      return Math.round((totalGCO2perKwh * 970 * 1000) / 1_000_000);
+    }
+
+    function calculateCost(nuclear, solar, hydro, fossil, stability) {
+      let cost =
+        75 - solar * 0.15 - hydro * 0.12 + fossil * 0.3 + nuclear * 0.05;
+
+      if (stability < 80) {
+        cost += (80 - stability) * 2.5;
+      }
+
+      if (stability < 50) {
+        cost *= 1.6;
+      }
+
+      return Math.round(Math.max(40, cost));
+    }
+
+    function calculateGridMetrics(nuclear, solar, hydro = 0) {
+      const fossil = Math.max(0, 100 - nuclear - solar - hydro);
+      const stability = calculateStability(nuclear, solar, hydro, fossil);
+      const co2 = calculateCO2(nuclear, solar, hydro, fossil);
+      const cost = calculateCost(nuclear, solar, hydro, fossil, stability);
+      return { nuclear, solar, hydro, fossil, stability, co2, cost };
+    }
+
+    function isOptimalMix(nuclear, solar, hydro, fossil, stability, co2, cost) {
+      return (
+        nuclear >= 50 &&
+        solar >= 25 &&
+        solar <= 45 &&
+        hydro >= 5 &&
+        fossil > 0 &&
+        fossil <= 15 &&
+        stability >= 80 &&
+        co2 < 150 &&
+        cost <= 105
+      );
+    }
+
+    function getGridStoryMessage(
+      stability,
+      co2,
+      cost,
+      nuclear,
+      solar,
+      hydro,
+      fossil
+    ) {
+      if (stability < 40) {
+        return {
+          icon: "🔴",
+          type: "danger",
+          message:
+            "BLACKOUT IMMINENT. Grid instability has triggered emergency cost spikes. This is what happened to California in 2020.",
+        };
+      }
+
+      if (stability < 60) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message: `Dangerous instability. At ${solar}% solar/wind without enough nuclear backing, rolling blackouts become likely in winter when sun is low.`,
+        };
+      }
+
+      if (nuclear === 0 && solar > 50) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message:
+            "Without nuclear baseload, this grid depends entirely on weather. Armenia's winters would cause frequent blackouts.",
+        };
+      }
+
+      if (nuclear === 100) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message:
+            "100% nuclear is not realistic for Armenia. Real grids need diversification — peaking plants, renewables, and grid flexibility. Metsamor is vital baseload, not a solo solution overnight.",
+        };
+      }
+
+      if (fossil === 0 && nuclear < 100) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message:
+            "0% oil/gas is not realistic. Every operating grid keeps gas or fuel-oil peaking plants for maintenance gaps, drought years, and winter spikes — even with nuclear and hydro.",
+        };
+      }
+
+      if (stability >= 80 && nuclear >= 40 && solar < 20) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message: `Stability looks fine (${stability}%) with ${nuclear}% nuclear, but only ${solar}% solar/wind is not a credible plan. Nuclear enables renewables — it does not replace them. Add meaningful solar/wind for a balanced grid.`,
+        };
+      }
+
+      if (isOptimalMix(nuclear, solar, hydro, fossil, stability, co2, cost)) {
+        return {
+          icon: "✅",
+          type: "success",
+          message: `Optimal grid mix. ${nuclear}% nuclear + ${solar}% solar/wind + ${hydro}% hydro + ${fossil}% fossil peaking = ${stability}% stability, ${co2} tons CO₂/hr, ${cost} AMD/kWh. This is the balanced future Armenia should aim for.`,
+        };
+      }
+
+      if (nuclear >= 40 && stability >= 80 && solar >= 20 && fossil > 0) {
+        return {
+          icon: "✅",
+          type: "success",
+          message: `Stable grid. ${nuclear}% nuclear, ${solar}% solar/wind, ${hydro}% hydro, and ${fossil}% fossil peaking work together — reliable, lower carbon, and economically viable.`,
+        };
+      }
+
+      if (co2 > 400) {
+        return {
+          icon: "🌫️",
+          type: "warning",
+          message: `High emissions: ${co2} tons of CO₂/hour. At this rate, Armenia cannot meet its climate commitments.`,
+        };
+      }
+
+      return {
+        icon: "📊",
+        type: "neutral",
+        message: `Current mix produces ${co2} tons CO₂/hr at ${cost} AMD/kWh. Adjust sliders to see Armenia's energy trade-offs.`,
+      };
+    }
+
+    function getStabilityDisplayState(stability, nuclear, solar) {
+      if (stability >= 80 && nuclear >= 40 && solar < 20) return "warning";
+      if (stability > 80) return "good";
+      if (stability >= 60) return "warning";
+      return "danger";
+    }
+
+    function getMetricState(metric, value) {
+      if (metric === "stability") {
+        if (value > 80) return "good";
+        if (value >= 60) return "warning";
+        return "danger";
+      }
+      if (metric === "co2") {
+        if (value < 200) return "good";
+        if (value <= 400) return "warning";
+        return "danger";
+      }
+      if (metric === "cost") {
+        if (value < 100) return "good";
+        if (value <= 150) return "warning";
+        return "danger";
+      }
+      return "neutral";
+    }
+
+    function stabilityStatusIcon(state) {
+      if (state === "good") return "✅";
+      if (state === "warning") return "⚠️";
+      return "🔴";
+    }
+
+    const ARMENIA_2025_MIX = {
+      nuclear: 29,
+      solar: 16,
+      hydro: 21,
+      fossil: 34,
+    };
+
+    const DEMO_SCENARIOS = [
+      {
+        id: "armenia",
+        label: "Armenia today (2025)",
+        nuclear: ARMENIA_2025_MIX.nuclear,
+        solar: ARMENIA_2025_MIX.solar,
+        hydro: ARMENIA_2025_MIX.hydro,
+      },
+      { id: "anti-nuclear", label: "Anti-nuclear mistake", nuclear: 0, solar: 70, hydro: 10 },
+      { id: "optimal", label: "Optimal future", nuclear: 55, solar: 30, hydro: 10 },
+      { id: "pure-nuclear", label: "100% nuclear (unrealistic)", nuclear: 100, solar: 0, hydro: 0 },
+    ];
+
+    // --- INLINED ENERGY ART LOGIC ---
+    const art = {
+      nuclear: {
+        idle: `<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="160" height="100" fill="#1a2030" rx="8"/>
+          <ellipse cx="80" cy="88" rx="55" ry="6" fill="#0d1118" opacity="0.6"/>
+          <path d="M52 88V52c0-8 12-14 28-14s28 6 28 14v36" fill="#2a3548" stroke="#3d4d66" stroke-width="1.5"/>
+          <path d="M58 88V58c0-5 8-9 22-9s22 4 22 9v30" fill="#232d3d"/>
+          <circle cx="80" cy="42" r="14" fill="#2a3548" stroke="#4a5f7a" stroke-width="1.5" stroke-dasharray="4 3"/>
+          <path d="M80 28v6M80 50v6M66 42h-6M94 42h6" stroke="#4a5f7a" stroke-width="1.5" opacity="0.5"/>
+          <text x="80" y="72" text-anchor="middle" fill="#5a6d85" font-size="7" font-family="system-ui,sans-serif">UNBUILT</text>
+        </svg>`,
+        acquired: `<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="nucGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00e5ff"/><stop offset="100%" stop-color="#0077b6"/>
+            </linearGradient>
+            <filter id="nucBlur"><feGaussianBlur stdDeviation="2"/></filter>
+          </defs>
+          <rect width="160" height="100" fill="#0d1828" rx="8"/>
+          <ellipse cx="80" cy="88" rx="55" ry="6" fill="#00b4d8" opacity="0.15"/>
+          <path d="M52 88V52c0-8 12-14 28-14s28 6 28 14v36" fill="#1a3a5c" stroke="#00b4d8" stroke-width="2"/>
+          <path d="M58 88V58c0-5 8-9 22-9s22 4 22 9v30" fill="#143050"/>
+          <circle cx="80" cy="42" r="14" fill="url(#nucGlow)" filter="url(#nucBlur)"/>
+          <circle cx="80" cy="42" r="10" fill="#00e5ff" opacity="0.9"/>
+          <path d="M80 30v4M80 50v4M68 42h-4M92 42h4" stroke="#7df9ff" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="80" cy="42" r="18" fill="none" stroke="#00b4d8" stroke-width="1" opacity="0.4">
+            <animate attributeName="r" values="14;20;14" dur="2.5s" repeatCount="indefinite"/>
+            <animate attributeName="opacity" values="0.5;0;0.5" dur="2.5s" repeatCount="indefinite"/>
+          </circle>
+          <rect x="70" y="78" width="20" height="4" rx="1" fill="#3fb950" opacity="0.8"/>
+        </svg>`,
+      },
+      solar: {
+        idle: `<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="160" height="100" fill="#1a1c18" rx="8"/>
+          <circle cx="120" cy="28" r="16" fill="#2a2820" stroke="#4a4535" stroke-width="1.5" stroke-dasharray="3 2"/>
+          <g opacity="0.35">
+            <path d="M120 10v6M120 42v6M104 28h-6M136 28h6" stroke="#5a5540" stroke-width="1.5"/>
+          </g>
+          <g transform="translate(24,48)">
+            <rect width="72" height="36" rx="3" fill="#2a2e28" stroke="#3d4238" stroke-width="1.5"/>
+            <line x1="24" y1="0" x2="24" y2="36" stroke="#3d4238"/>
+            <line x1="48" y1="0" x2="48" y2="36" stroke="#3d4238"/>
+            <line x1="0" y1="18" x2="72" y2="18" stroke="#3d4238"/>
+          </g>
+          <line x1="60" y1="84" x2="60" y2="92" stroke="#3d4238" stroke-width="2"/>
+          <text x="80" y="72" text-anchor="middle" fill="#5a5d50" font-size="7" font-family="system-ui,sans-serif">UNBUILT</text>
+        </svg>`,
+        acquired: `<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fff3b0"/><stop offset="100%" stop-color="#ffd166"/>
+            </linearGradient>
+          </defs>
+          <rect width="160" height="100" fill="#1a1810" rx="8"/>
+          <circle cx="120" cy="28" r="18" fill="url(#sunGrad)"/>
+          <g stroke="#ffe566" stroke-width="2" stroke-linecap="round">
+            <path d="M120 6v8M120 42v8M104 28h-8M136 28h8M109 17l6 6M125 33l6 6M131 17l-6 6M115 33l-6 6"/>
+          </g>
+          <g transform="translate(24,48)">
+            <rect width="72" height="36" rx="3" fill="#1e3a5f" stroke="#4a9eff" stroke-width="1.5"/>
+            <rect width="72" height="36" rx="3" fill="#2563eb" opacity="0.35"/>
+            <line x1="24" y1="0" x2="24" y2="36" stroke="#7eb8ff" opacity="0.6"/>
+            <line x1="48" y1="0" x2="48" y2="36" stroke="#7eb8ff" opacity="0.6"/>
+            <line x1="0" y1="18" x2="72" y2="18" stroke="#7eb8ff" opacity="0.6"/>
+          </g>
+          <path d="M18 55 L42 75 L66 55" fill="none" stroke="#ffd166" stroke-width="1" opacity="0.3">
+            <animate attributeName="opacity" values="0.2;0.5;0.2" dur="2s" repeatCount="indefinite"/>
+          </path>
+          <line x1="60" y1="84" x2="60" y2="92" stroke="#8a7a50" stroke-width="2"/>
+        </svg>`,
+      },
+      hydro: {
+        idle: `<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="160" height="100" fill="#141a1e" rx="8"/>
+          <path d="M0 72 Q40 68 80 72 T160 72 L160 100 L0 100Z" fill="#1a2830"/>
+          <rect x="48" y="38" width="64" height="34" rx="2" fill="#2a3840" stroke="#3d5560" stroke-width="1.5"/>
+          <rect x="70" y="48" width="20" height="24" fill="#1a2830" stroke="#3d5560" stroke-width="1"/>
+          <path d="M52 72h56" stroke="#3d5560" stroke-width="2"/>
+          <path d="M80 38 L80 28 L95 38Z" fill="#2a3840" stroke="#3d5560"/>
+          <text x="80" y="62" text-anchor="middle" fill="#4a6570" font-size="7" font-family="system-ui,sans-serif">UNBUILT</text>
+        </svg>`,
+        acquired: `<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="waterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stop-color="#5eb8d4"/><stop offset="100%" stop-color="#2a8fa8"/>
+            </linearGradient>
+          </defs>
+          <rect width="160" height="100" fill="#0d1a22" rx="8"/>
+          <path d="M0 70 Q40 62 80 70 T160 70 L160 100 L0 100Z" fill="url(#waterGrad)" opacity="0.85"/>
+          <path d="M0 78 Q50 72 100 78 T160 78" fill="none" stroke="#7df9ff" stroke-width="1" opacity="0.5">
+            <animate attributeName="d" values="M0 78 Q50 72 100 78 T160 78;M0 78 Q50 76 100 72 T160 78;M0 78 Q50 72 100 78 T160 78" dur="3s" repeatCount="indefinite"/>
+          </path>
+          <rect x="48" y="38" width="64" height="34" rx="2" fill="#3a5560" stroke="#5eb8d4" stroke-width="2"/>
+          <rect x="70" y="48" width="20" height="24" fill="#1a4050"/>
+          <ellipse cx="80" cy="60" rx="6" ry="8" fill="#7df9ff" opacity="0.6">
+            <animate attributeName="opacity" values="0.4;0.8;0.4" dur="1.5s" repeatCount="indefinite"/>
+          </ellipse>
+          <path d="M80 38 L80 26 L98 38Z" fill="#4a7080" stroke="#5eb8d4"/>
+          <path d="M108 72c-4 6-8 6-12 0" fill="#5eb8d4" opacity="0.7">
+            <animate attributeName="d" values="M108 72c-4 6-8 6-12 0;M108 74c-4 4-8 8-12 2;M108 72c-4 6-8 6-12 0" dur="2s" repeatCount="indefinite"/>
+          </path>
+        </svg>`,
+      },
+      fossil: {
+        idle: `<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="160" height="100" fill="#1a1816" rx="8"/>
+          <rect x="44" y="42" width="72" height="46" rx="3" fill="#2a2620" stroke="#4a4035" stroke-width="1.5"/>
+          <rect x="58" y="52" width="18" height="28" fill="#1a1816" stroke="#4a4035"/>
+          <rect x="84" y="52" width="18" height="28" fill="#1a1816" stroke="#4a4035"/>
+          <rect x="72" y="28" width="16" height="14" rx="2" fill="#2a2620" stroke="#4a4035"/>
+          <rect x="76" y="8" width="8" height="22" fill="#2a2620" stroke="#4a4035"/>
+          <text x="80" y="68" text-anchor="middle" fill="#5a5045" font-size="7" font-family="system-ui,sans-serif">UNBUILT</text>
+        </svg>`,
+        acquired: `<svg viewBox="0 0 160 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="smokeGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stop-color="#6a5a4a" stop-opacity="0"/><stop offset="100%" stop-color="#9a8a7a" stop-opacity="0.6"/>
+            </linearGradient>
+          </defs>
+          <rect width="160" height="100" fill="#1a1410" rx="8"/>
+          <rect x="44" y="42" width="72" height="46" rx="3" fill="#4a3828" stroke="#a08060" stroke-width="2"/>
+          <rect x="58" y="52" width="18" height="28" fill="#2a2018"/>
+          <rect x="84" y="52" width="18" height="28" fill="#2a2018"/>
+          <rect x="58" y="58" width="18" height="8" fill="#e85d04" opacity="0.7">
+            <animate attributeName="opacity" values="0.5;0.9;0.5" dur="1.2s" repeatCount="indefinite"/>
+          </rect>
+          <rect x="72" y="28" width="16" height="14" rx="2" fill="#5a4535" stroke="#c49a6c"/>
+          <rect x="76" y="8" width="8" height="22" fill="#5a4535" stroke="#c49a6c"/>
+          <ellipse cx="80" cy="6" rx="12" ry="8" fill="url(#smokeGrad)">
+            <animate attributeName="cy" values="6;0;6" dur="3s" repeatCount="indefinite"/>
+            <animate attributeName="rx" values="10;16;10" dur="3s" repeatCount="indefinite"/>
+          </ellipse>
+          <ellipse cx="72" cy="10" rx="8" ry="6" fill="#7a6a5a" opacity="0.4">
+            <animate attributeName="cy" values="10;2;10" dur="2.5s" repeatCount="indefinite"/>
+          </ellipse>
+          <circle cx="130" cy="78" r="3" fill="#e05252" opacity="0.5"/>
+        </svg>`,
+      },
+    };
+
+    const icons = {
+      nuclear: {
+        idle: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.5"/><path d="M20 8v4M20 28v4M8 20h4M28 20h4" stroke="currentColor" stroke-width="1.5" opacity="0.4"/></svg>`,
+        acquired: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="7" fill="currentColor" opacity="0.9"/><path d="M20 6v5M20 29v5M7 20h5M28 20h5" stroke="currentColor" stroke-width="2"/></svg>`,
+      },
+      solar: {
+        idle: `<svg viewBox="0 0 40 40"><circle cx="28" cy="12" r="6" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.4"/><rect x="6" y="22" width="28" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"/></svg>`,
+        acquired: `<svg viewBox="0 0 40 40"><circle cx="28" cy="12" r="7" fill="currentColor"/><rect x="6" y="22" width="28" height="14" rx="2" fill="currentColor" opacity="0.5" stroke="currentColor" stroke-width="1.5"/></svg>`,
+      },
+      hydro: {
+        idle: `<svg viewBox="0 0 40 40"><path d="M8 32h24v-14H8z" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"/><path d="M20 18v-8l8 8" fill="none" stroke="currentColor" opacity="0.4"/></svg>`,
+        acquired: `<svg viewBox="0 0 40 40"><path d="M6 32 Q20 28 34 32 L34 36 L6 36Z" fill="currentColor" opacity="0.4"/><rect x="10" y="16" width="20" height="16" rx="1" fill="currentColor" opacity="0.7"/></svg>`,
+      },
+      fossil: {
+        idle: `<svg viewBox="0 0 40 40"><rect x="10" y="18" width="20" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.5"/><rect x="17" y="8" width="6" height="12" fill="none" stroke="currentColor" opacity="0.4"/></svg>`,
+        acquired: `<svg viewBox="0 0 40 40"><rect x="10" y="18" width="20" height="16" rx="2" fill="currentColor" opacity="0.6"/><rect x="17" y="6" width="6" height="14" fill="currentColor"/><ellipse cx="20" cy="4" rx="5" ry="3" fill="currentColor" opacity="0.35"/></svg>`,
+      },
+    };
+
+    function getFacilityArt(sourceId, acquired = false) {
+      const set = art[sourceId];
+      if (!set) return "";
+      return acquired ? set.acquired : set.idle;
+    }
+
+    function getSourceIcon(sourceId, acquired = false) {
+      const set = icons[sourceId];
+      if (!set) return "";
+      return acquired ? set.acquired : set.idle;
+    }
+
+    function renderFacilityPanel(sourceId, acquired, label, color = "") {
+      const state = acquired ? "acquired" : "idle";
+      const style = color ? ` style="--facility-color:${color}"` : "";
+      return `
+        <div class="facility-panel ${state}" data-source="${sourceId}"${style}>
+          <div class="facility-art">${getFacilityArt(sourceId, acquired)}</div>
+          <span class="facility-label">${label}</span>
+          <span class="facility-status">${acquired ? "Online" : "Not built"}</span>
+        </div>
+      `;
+    }
+
+    // --- INLINED MANAGEMENT ENGINE LOGIC ---
+    const BUDGET_TOTAL = 1_000_000;
+
+    const ENERGY_SOURCES = [
+      {
+        id: "nuclear",
+        name: "Nuclear",
+        tagline: "Baseload backbone",
+        unitCost: 275_000,
+        capacityMW: 48,
+        color: "#00b4d8",
+        accent: "#0077b6",
+      },
+      {
+        id: "solar",
+        name: "Solar & Wind",
+        tagline: "Clean but variable",
+        unitCost: 92_000,
+        capacityMW: 22,
+        color: "#ffd166",
+        accent: "#f4a261",
+      },
+      {
+        id: "hydro",
+        name: "Hydro",
+        tagline: "Flexible & clean",
+        unitCost: 105_000,
+        capacityMW: 38,
+        color: "#5eb8d4",
+        accent: "#2a8fa8",
+      },
+      {
+        id: "fossil",
+        name: "Fossil",
+        tagline: "Peaking · high CO₂",
+        unitCost: 52_000,
+        capacityMW: 32,
+        color: "#a08060",
+        accent: "#6b5344",
+      },
+    ];
+
+    function getSourceById(id) {
+      return ENERGY_SOURCES.find((s) => s.id === id);
+    }
+
+    function calculateSpend(allocations) {
+      return ENERGY_SOURCES.reduce(
+        (sum, s) => sum + (allocations[s.id] || 0) * s.unitCost,
+        0
+      );
+    }
+
+    function getRemainingBudget(allocations) {
+      return BUDGET_TOTAL - calculateSpend(allocations);
+    }
+
+    function canIncrementAllocation(allocations, sourceId) {
+      const source = getSourceById(sourceId);
+      if (!source) return false;
+      return calculateSpend(allocations) + source.unitCost <= BUDGET_TOTAL;
+    }
+
+    function getMaxUnitsForSource(sourceId, allocations) {
+      const source = getSourceById(sourceId);
+      const remaining = getRemainingBudget(allocations) + (allocations[sourceId] || 0) * source.unitCost;
+      return Math.max(0, Math.floor(remaining / source.unitCost));
+    }
+
+    function tryIncrementAllocation(allocations, sourceId) {
+      if (!canIncrementAllocation(allocations, sourceId)) return false;
+      allocations[sourceId] = (allocations[sourceId] || 0) + 1;
+      return true;
+    }
+
+    function normalizeAllocationsToBudget(allocations) {
+      const out = { nuclear: 0, solar: 0, hydro: 0, fossil: 0, ...allocations };
+      const trimOrder = ["fossil", "solar", "hydro", "nuclear"];
+      while (calculateSpend(out) > BUDGET_TOTAL) {
+        let trimmed = false;
+        for (const id of trimOrder) {
+          if (out[id] > 0) {
+            out[id]--;
+            trimmed = true;
+            break;
+          }
+        }
+        if (!trimmed) break;
+      }
+      return out;
+    }
+
+    function applyAllocations(target, next) {
+      const normalized = normalizeAllocationsToBudget(next);
+      for (const s of ENERGY_SOURCES) {
+        target[s.id] = normalized[s.id] || 0;
+      }
+      return normalized;
+    }
+
+    function calculateCapacity(allocations) {
+      const perSource = {};
+      let totalMW = 0;
+      for (const s of ENERGY_SOURCES) {
+        const mw = (allocations[s.id] || 0) * s.capacityMW;
+        perSource[s.id] = mw;
+        totalMW += mw;
+      }
+      return { perSource, totalMW };
+    }
+
+    function capacityToMix(perSource, totalMW) {
+      if (totalMW <= 0) {
+        return { nuclear: 0, solar: 0, hydro: 0, fossil: 0 };
+      }
+      return {
+        nuclear: Math.round((perSource.nuclear / totalMW) * 100),
+        solar: Math.round((perSource.solar / totalMW) * 100),
+        hydro: Math.round((perSource.hydro / totalMW) * 100),
+        fossil: Math.round((perSource.fossil / totalMW) * 100),
+      };
+    }
+
+    function calculateAnnualOutputGWh(totalMW, stability) {
+      if (totalMW <= 0) return 0;
+      const baseFactor = 0.52;
+      const stabilityFactor = 0.7 + (stability / 100) * 0.3;
+      return Math.round(totalMW * baseFactor * stabilityFactor * 8760 * 0.001);
+    }
+
+    function calculateDiversificationPts(allocations, mix, totalMW) {
+      if (totalMW <= 0) return 0;
+
+      const activeTypes = ENERGY_SOURCES.filter((s) => (allocations[s.id] || 0) > 0).length;
+      const shares = [mix.nuclear, mix.solar, mix.hydro, mix.fossil];
+      const maxShare = Math.max(...shares);
+      const represented = shares.filter((p) => p >= 8).length;
+
+      let pts = 0;
+
+      if (activeTypes >= 4) pts += 10;
+      else if (activeTypes === 3) pts += 7;
+      else if (activeTypes === 2) pts += 3;
+
+      if (represented >= 4) pts += 8;
+      else if (represented === 3) pts += 5;
+      else if (represented === 2) pts += 2;
+
+      if (maxShare <= 50) pts += 7;
+      else if (maxShare <= 60) pts += 5;
+      else if (maxShare <= 70) pts += 2;
+
+      if (maxShare >= 85) pts = Math.max(0, pts - 8);
+      if (activeTypes === 1) pts = Math.max(0, pts - 10);
+
+      return Math.min(25, Math.max(0, pts));
+    }
+
+    function calculateGameScore(metrics, totalMW, annualGWh, allocations, mix) {
+      const empty = {
+        score: 0,
+        grade: "—",
+        outputPts: 0,
+        emissionPts: 0,
+        stabilityPts: 0,
+        diversificationPts: 0,
+        activeTypes: 0,
+        maxShare: 0,
+      };
+
+      if (totalMW <= 0) return empty;
+
+      const outputPts = Math.min(25, Math.round((annualGWh / 1000) * 25));
+      const emissionPts = Math.max(0, Math.min(25, Math.round(25 - metrics.co2 / 14)));
+      const stabilityPts = Math.max(0, Math.min(25, Math.round((metrics.stability / 100) * 25)));
+      const diversificationPts = calculateDiversificationPts(allocations, mix, totalMW);
+      const activeTypes = ENERGY_SOURCES.filter((s) => (allocations[s.id] || 0) > 0).length;
+      const maxShare = Math.max(mix.nuclear, mix.solar, mix.hydro, mix.fossil);
+
+      let score = outputPts + emissionPts + stabilityPts + diversificationPts;
+
+      if (metrics.stability < 50) score = Math.max(0, score - 12);
+      if (metrics.co2 > 500) score = Math.max(0, score - 8);
+
+      score = Math.min(100, Math.max(0, score));
+
+      let grade = "F";
+      if (score >= 90) grade = "S";
+      else if (score >= 80) grade = "A";
+      else if (score >= 65) grade = "B";
+      else if (score >= 50) grade = "C";
+      else if (score >= 35) grade = "D";
+
+      return {
+        score,
+        grade,
+        outputPts,
+        emissionPts,
+        stabilityPts,
+        diversificationPts,
+        activeTypes,
+        maxShare,
+      };
+    }
+
+    function getCharacterState(metrics, score, totalMW) {
+      if (totalMW === 0) return { mood: "idle", message: "Allocate your $1M budget to build the grid." };
+
+      if (metrics.stability < 40) {
+        return {
+          mood: "alert",
+          message: "Blackout risk! Add nuclear baseload or reduce volatile solar share.",
+        };
+      }
+
+      if (metrics.stability < 60) {
+        return {
+          mood: "worried",
+          message: "Grid is shaky. Nuclear and hydro stabilize weather-dependent solar.",
+        };
+      }
+
+      if (score.diversificationPts >= 20 && score.score >= 85 && metrics.co2 < 180) {
+        return {
+          mood: "celebrate",
+          message: "Outstanding! Diversified, high output, and low emissions — a resilient grid.",
+        };
+      }
+
+      if (score.activeTypes === 1) {
+        return {
+          mood: "worried",
+          message: "All eggs in one basket. Real grids diversify across nuclear, hydro, solar, and peaking plants.",
+        };
+      }
+
+      if (score.maxShare >= 75) {
+        return {
+          mood: "thinking",
+          message: `One source dominates at ${score.maxShare}% of capacity. Spread investment for a stronger score.`,
+        };
+      }
+
+      if (score.diversificationPts < 10 && score.activeTypes >= 2) {
+        return {
+          mood: "thinking",
+          message: "You use multiple fuels, but the mix is still lopsided. Aim for ~10%+ from at least three sources.",
+        };
+      }
+
+      if (metrics.co2 > 400) {
+        return {
+          mood: "worried",
+          message: "Emissions are crushing climate goals. Shift budget from fossil to clean sources.",
+        };
+      }
+
+      if (score.grade === "A" || score.grade === "S") {
+        return {
+          mood: score.grade === "S" ? "celebrate" : "happy",
+          message:
+            score.grade === "S"
+              ? "S-rank grid! Diversified, powerful, and clean — outstanding work."
+              : "A-rank achieved. Strong diversified mix — keep pushing for S-rank perfection.",
+        };
+      }
+
+      if (metrics.stability >= 80 && metrics.co2 < 220 && score.diversificationPts >= 15) {
+        return {
+          mood: "happy",
+          message: "Solid balance — diversified mix, stable grid, and manageable emissions.",
+        };
+      }
+
+      return {
+        mood: "thinking",
+        message: "Maximize output and stability, cut CO₂, and diversify — no single source should dominate.",
+      };
+    }
+
+    function resolveFaceMood(advisorMood, grade, stability) {
+      if (stability < 40) return advisorMood;
+      if (grade === "S") return "celebrate";
+      if (grade === "A") return "happy";
+      return advisorMood;
+    }
+
+    const PRESET_STRATEGIES = [
+      {
+        id: "blank",
+        label: "Fresh start",
+        allocations: { nuclear: 0, solar: 0, hydro: 0, fossil: 0 },
+      },
+      {
+        id: "balanced",
+        label: "Balanced future",
+        allocations: { nuclear: 2, solar: 2, hydro: 1, fossil: 1 },
+      },
+      {
+        id: "green",
+        label: "Renewables push",
+        allocations: { nuclear: 1, solar: 4, hydro: 2, fossil: 0 },
+      },
+      {
+        id: "mistake",
+        label: "Anti-nuclear trap",
+        allocations: { nuclear: 0, solar: 5, hydro: 1, fossil: 3 },
+      },
+      {
+        id: "armenia",
+        label: "Armenia-scale mix",
+        allocations: { nuclear: 1, solar: 2, hydro: 2, fossil: 2 },
+      },
+    ];
+
+
+    const MIN_UNIT_COST = Math.min(...ENERGY_SOURCES.map((s) => s.unitCost));
+
+    const RING_CIRC = 2 * Math.PI * 52;
+
+    const allocations = { nuclear: 0, solar: 0, hydro: 0, fossil: 0 };
+
+    const budgetEl = document.getElementById("budget-remaining");
+    const budgetSpentEl = document.getElementById("budget-spent");
+    const budgetBarFill = document.getElementById("budget-bar-fill");
+    const budgetPill = document.getElementById("budget-pill");
+    const sourceGrid = document.getElementById("source-grid");
+    const energyGallery = document.getElementById("energy-gallery");
+    const mixBar = document.getElementById("mix-bar");
+    const mixLegend = document.getElementById("mix-legend");
+    const presetsEl = document.getElementById("presets");
+    const character = document.getElementById("character");
+    const advisorText = document.getElementById("advisor-text");
+    const scoreGrade = document.getElementById("score-grade");
+    const scorePts = document.getElementById("score-pts");
+    const scoreRingFill = document.getElementById("score-ring-fill");
+    const mouth = document.getElementById("mouth");
+    const eyeLeft = document.getElementById("eye-left");
+    const eyeRight = document.getElementById("eye-right");
+
+    function formatMoney(n) {
+      return "$" + n.toLocaleString("en-US");
+    }
+
+    function setMetricState(el, state) {
+      el.classList.remove("state-good", "state-warn", "state-bad");
+      if (state) el.classList.add("state-" + state);
+    }
+
+    function getMetricTileState(kind, value) {
+      if (kind === "stability") {
+        if (value > 80) return "good";
+        if (value >= 60) return "warn";
+        return "bad";
+      }
+      if (kind === "co2") {
+        if (value < 200) return "good";
+        if (value <= 400) return "warn";
+        return "bad";
+      }
+      if (kind === "output") {
+        if (value >= 800) return "good";
+        if (value >= 400) return "warn";
+        return value > 0 ? "warn" : null;
+      }
+      return null;
+    }
+
+    function updateCharacterFace(mood) {
+      const faces = {
+        idle: { mouth: "M 48 62 Q 60 66 72 62", eyeRy: 6, eyeCx: [46, 74], pupilCx: [48, 76] },
+        happy: { mouth: "M 46 60 Q 60 72 74 60", eyeRy: 5, eyeCx: [46, 74], pupilCx: [48, 76] },
+        worried: { mouth: "M 50 66 Q 60 62 70 66", eyeRy: 8, eyeCx: [44, 76], pupilCx: [45, 77] },
+        alert: { mouth: "M 52 68 L 68 68", eyeRy: 9, eyeCx: [43, 77], pupilCx: [44, 78] },
+        celebrate: { mouth: "M 44 58 Q 60 78 76 58", eyeRy: 4, eyeCx: [46, 74], pupilCx: [48, 76] },
+        thinking: { mouth: "M 54 64 Q 60 58 66 64", eyeRy: 6, eyeCx: [47, 73], pupilCx: [49, 75] },
+      };
+      const f = faces[mood] || faces.idle;
+      mouth.setAttribute("d", f.mouth);
+      eyeLeft.setAttribute("ry", f.eyeRy);
+      eyeRight.setAttribute("ry", f.eyeRy);
+      eyeLeft.setAttribute("cx", f.eyeCx[0]);
+      eyeRight.setAttribute("cx", f.eyeCx[1]);
+      document.getElementById("pupil-left").setAttribute("cx", f.pupilCx[0]);
+      document.getElementById("pupil-right").setAttribute("cx", f.pupilCx[1]);
+    }
+
+    function renderEnergyGallery() {
+      energyGallery.innerHTML = ENERGY_SOURCES.map((s) => {
+        const acquired = (allocations[s.id] || 0) > 0;
+        return renderFacilityPanel(s.id, acquired, s.name, s.color);
+      }).join("");
+    }
+
+    function renderSourceCards() {
+      sourceGrid.innerHTML = ENERGY_SOURCES.map((s) => {
+        const units = allocations[s.id];
+        const acquired = units > 0;
+        const spent = units * s.unitCost;
+        const mw = units * s.capacityMW;
+        const canAdd = canIncrementAllocation(allocations, s.id);
+        return `
+          <article class="source-card ${acquired ? "active" : ""}" data-id="${s.id}"
+            style="--source-color: ${s.color}">
+            <div class="source-illustration" aria-hidden="true">
+              <div class="art-layer art-idle">${getFacilityArt(s.id, false)}</div>
+              <div class="art-layer art-acquired">${getFacilityArt(s.id, true)}</div>
+            </div>
+            <div class="source-header">
+              <div class="source-logo" style="color: ${s.color}">${getSourceIcon(s.id, acquired)}</div>
+              <div class="source-meta">
+                <h3>${s.name}</h3>
+                <div class="tagline">${s.tagline}</div>
+              </div>
+            </div>
+            <div class="source-stats">
+              <span><strong>${formatMoney(s.unitCost)}</strong> / unit</span>
+              <span><strong>${s.capacityMW}</strong> MW each</span>
+            </div>
+            <div class="source-stats">
+              <span>Spend: <strong>${formatMoney(spent)}</strong></span>
+              <span>Capacity: <strong>${mw} MW</strong></span>
+            </div>
+            <div class="unit-controls">
+              <button type="button" class="unit-btn" data-action="dec" data-id="${s.id}"
+                aria-label="Remove ${s.name} unit" ${units <= 0 ? "disabled" : ""}>−</button>
+              <span class="unit-count">${units}</span>
+              <button type="button" class="unit-btn" data-action="inc" data-id="${s.id}"
+                aria-label="Add ${s.name} unit" ${canAdd ? "" : "disabled"}>+</button>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      sourceGrid.querySelectorAll(".unit-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.id;
+          if (btn.dataset.action === "inc") {
+            tryIncrementAllocation(allocations, id);
+          } else {
+            allocations[id] = Math.max(0, allocations[id] - 1);
+          }
+          updateUI();
+        });
+      });
+    }
+
+    function renderMix(metrics) {
+      const segs = [
+        { id: "nuclear", pct: metrics.nuclear, color: "#00b4d8" },
+        { id: "solar", pct: metrics.solar, color: "#ffd166" },
+        { id: "hydro", pct: metrics.hydro, color: "#5eb8d4" },
+        { id: "fossil", pct: metrics.fossil, color: "#a08060" },
+      ];
+      mixBar.innerHTML = segs
+        .map((s) => `<div class="mix-seg" style="width:${s.pct}%;background:${s.color}"></div>`)
+        .join("");
+      mixLegend.innerHTML = segs
+        .map((s) => {
+          const name = ENERGY_SOURCES.find((e) => e.id === s.id)?.name || s.id;
+          return `<span style="--c:${s.color}"><span style="background:${s.color}" class="dot"></span>${name} ${s.pct}%</span>`;
+        })
+        .join("");
+    }
+
+    function updateUI() {
+      applyAllocations(allocations, allocations);
+
+      const spend = calculateSpend(allocations);
+      const remaining = Math.max(0, BUDGET_TOTAL - spend);
+      const pctSpent = Math.min(100, (spend / BUDGET_TOTAL) * 100);
+
+      budgetEl.textContent = formatMoney(remaining);
+      budgetSpentEl.textContent = formatMoney(spend) + " spent";
+      budgetBarFill.style.width = pctSpent + "%";
+      budgetBarFill.classList.toggle("full", remaining < MIN_UNIT_COST);
+      budgetPill.classList.toggle("budget-full", remaining < MIN_UNIT_COST);
+
+      const { perSource, totalMW } = calculateCapacity(allocations);
+      const mix = capacityToMix(perSource, totalMW);
+
+      let metrics = { stability: 0, co2: 0, cost: 0, nuclear: 0, solar: 0, hydro: 0, fossil: 0 };
+      if (totalMW > 0) {
+        metrics = calculateGridMetrics(mix.nuclear, mix.solar, mix.hydro);
+      }
+
+      const annualGWh = calculateAnnualOutputGWh(totalMW, metrics.stability);
+      const gameScore = calculateGameScore(metrics, totalMW, annualGWh, allocations, mix);
+      const advisor = getCharacterState(metrics, gameScore, totalMW);
+
+      document.getElementById("val-output").textContent = annualGWh.toLocaleString();
+      document.getElementById("val-stability").textContent = totalMW ? metrics.stability : "—";
+      document.getElementById("val-co2").textContent = totalMW ? metrics.co2 : "—";
+      document.getElementById("val-capacity").textContent = totalMW.toLocaleString();
+
+      setMetricState(document.getElementById("tile-output"), getMetricTileState("output", annualGWh));
+      setMetricState(document.getElementById("tile-stability"), totalMW ? getMetricTileState("stability", metrics.stability) : null);
+      setMetricState(document.getElementById("tile-co2"), totalMW ? getMetricTileState("co2", metrics.co2) : null);
+
+      renderMix(metrics);
+      renderEnergyGallery();
+      renderSourceCards();
+
+      scoreGrade.textContent = gameScore.grade;
+      scorePts.textContent = gameScore.score + " pts";
+      const offset = RING_CIRC - (gameScore.score / 100) * RING_CIRC;
+      scoreRingFill.style.strokeDashoffset = offset;
+      const ringColor =
+        gameScore.score >= 80 ? "var(--md-success)" :
+        gameScore.score >= 50 ? "var(--md-warning)" : "var(--md-error)";
+      scoreRingFill.style.stroke = ringColor;
+
+      document.getElementById("bd-output").textContent = `${gameScore.outputPts} / 25`;
+      document.getElementById("bd-emission").textContent = `${gameScore.emissionPts} / 25`;
+      document.getElementById("bd-stability").textContent = `${gameScore.stabilityPts} / 25`;
+      document.getElementById("bd-diversify").textContent = `${gameScore.diversificationPts} / 25`;
+
+      const faceMood = resolveFaceMood(advisor.mood, gameScore.grade, metrics.stability);
+      character.dataset.mood = faceMood;
+      advisorText.textContent = advisor.message;
+      updateCharacterFace(faceMood);
+    }
+
+    PRESET_STRATEGIES.forEach((preset) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "preset-btn";
+      btn.textContent = preset.label;
+      btn.addEventListener("click", () => {
+        applyAllocations(allocations, preset.allocations);
+        updateUI();
+      });
+      presetsEl.appendChild(btn);
+    });
+
+    updateUI();
+  </script>
+</body>
+</html>

@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Grid — Armenia Energy Simulator</title>
+  <style>
+    :root,
+    [data-theme="dark"] {
+      --bg-primary: #0f0f0f;
+      --bg-card: #1a1a1a;
+      --text-primary: #f5f5f5;
+      --text-muted: #9a9a9a;
+      --accent-gold: #d4af37;
+      --accent-blue: #00bfff;
+      --accent-fossil: #a08060;
+      --accent-hydro: #5eb8d4;
+      --mix-hydro: #5eb8d4;
+      --danger-red: #e05252;
+      --success-green: #3fb950;
+      --warning-gold: #d4af37;
+      --border: #2a2a2a;
+      --slider-track: #2a2a2a;
+      --mix-fossil: #666;
+      --story-success-bg: rgba(63, 185, 80, 0.08);
+      --story-warning-bg: rgba(212, 175, 55, 0.08);
+      --story-danger-bg: rgba(224, 82, 82, 0.1);
+      --demo-hover-bg: rgba(212, 175, 55, 0.06);
+    }
+
+    [data-theme="light"] {
+      --bg-primary: #eceae4;
+      --bg-card: #ffffff;
+      --text-primary: #1a1a1a;
+      --text-muted: #5c5c5c;
+      --accent-gold: #9a7b1a;
+      --accent-blue: #0077b6;
+      --accent-fossil: #8b6914;
+      --accent-hydro: #2a8fa8;
+      --mix-hydro: #4a9eb0;
+      --danger-red: #c0392b;
+      --success-green: #2d8a3e;
+      --warning-gold: #9a7b1a;
+      --border: #d4d0c8;
+      --slider-track: #d4d0c8;
+      --mix-fossil: #8a7a6a;
+      --story-success-bg: rgba(45, 138, 62, 0.1);
+      --story-warning-bg: rgba(154, 123, 26, 0.12);
+      --story-danger-bg: rgba(192, 57, 43, 0.1);
+      --demo-hover-bg: rgba(154, 123, 26, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.5;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 3rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      position: relative;
+    }
+
+    .header-top {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 0.75rem;
+    }
+
+    .theme-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.4rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .theme-toggle:hover {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    header h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      letter-spacing: 0.02em;
+      margin-bottom: 0.35rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 2rem;
+      align-items: start;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .panel-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+
+    .slider-group {
+      margin-bottom: 1.75rem;
+    }
+
+    .slider-group:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.5rem;
+    }
+
+    .slider-label span:first-child {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .slider-label .value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .slider-label .value.nuclear { color: var(--accent-blue); }
+    .slider-label .value.solar { color: var(--success-green); }
+    .slider-label .value.hydro { color: var(--accent-hydro); }
+    .slider-label .value.fossil { color: var(--accent-fossil); }
+
+    .mix-total {
+      margin-top: 1rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    .mix-total strong {
+      color: var(--accent-gold);
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 8px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: var(--slider-track);
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--accent-gold);
+      border: 2px solid var(--bg-primary);
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+      transition: transform 0.15s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.1);
+    }
+
+    #nuclear-slider::-webkit-slider-thumb { background: var(--accent-blue); box-shadow: 0 0 8px rgba(0, 191, 255, 0.35); }
+    #solar-slider::-webkit-slider-thumb { background: var(--success-green); box-shadow: 0 0 8px rgba(63, 185, 80, 0.35); }
+    #hydro-slider::-webkit-slider-thumb { background: var(--accent-hydro); box-shadow: 0 0 8px rgba(94, 184, 212, 0.4); }
+    #fossil-slider::-webkit-slider-thumb { background: var(--accent-fossil); box-shadow: 0 0 8px rgba(160, 128, 96, 0.4); }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--bg-primary);
+      background: var(--accent-gold);
+      cursor: pointer;
+    }
+
+    #nuclear-slider::-moz-range-thumb { background: var(--accent-blue); }
+    #solar-slider::-moz-range-thumb { background: var(--success-green); }
+    #hydro-slider::-moz-range-thumb { background: var(--accent-hydro); }
+    #fossil-slider::-moz-range-thumb { background: var(--accent-fossil); }
+
+    input[type="range"].slider-readonly {
+      pointer-events: none;
+      cursor: default;
+      opacity: 1;
+    }
+
+    .mix-bar {
+      margin-top: 1.5rem;
+      height: 28px;
+      display: flex;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .mix-segment {
+      transition: width 0.25s ease;
+      min-width: 2px;
+    }
+
+    .mix-segment.nuclear { background: var(--accent-blue); }
+    .mix-segment.solar { background: var(--success-green); }
+    .mix-segment.hydro { background: var(--mix-hydro); }
+    .mix-segment.fossil { background: var(--mix-fossil); }
+
+    .mix-legend {
+      display: flex;
+      gap: 1rem;
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .mix-legend span::before {
+      content: "";
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      margin-right: 0.35rem;
+      vertical-align: middle;
+    }
+
+    .mix-legend .leg-nuclear::before { background: var(--accent-blue); }
+    .mix-legend .leg-solar::before { background: var(--success-green); }
+    .mix-legend .leg-hydro::before { background: var(--mix-hydro); }
+    .mix-legend .leg-fossil::before { background: var(--mix-fossil); }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .metric-card.wide {
+      grid-column: 1 / -1;
+    }
+
+    .metric-card .label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-card .number {
+      font-size: 2rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      line-height: 1.2;
+    }
+
+    .metric-card .unit {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .metric-card .status-icon {
+      font-size: 1.25rem;
+      margin-left: 0.25rem;
+    }
+
+    .metric-card.state-good {
+      border-color: var(--success-green);
+      box-shadow: 0 0 20px rgba(63, 185, 80, 0.12);
+    }
+    .metric-card.state-good .number { color: var(--success-green); }
+
+    .metric-card.state-warning {
+      border-color: var(--warning-gold);
+      box-shadow: 0 0 20px rgba(212, 175, 55, 0.12);
+    }
+    .metric-card.state-warning .number { color: var(--warning-gold); }
+
+    .metric-card.state-danger {
+      border-color: var(--danger-red);
+      box-shadow: 0 0 20px rgba(224, 82, 82, 0.2);
+      animation: pulse-danger 1.5s ease-in-out infinite;
+    }
+    .metric-card.state-danger .number { color: var(--danger-red); }
+
+    @keyframes pulse-danger {
+      0%, 100% { box-shadow: 0 0 20px rgba(224, 82, 82, 0.2); }
+      50% { box-shadow: 0 0 32px rgba(224, 82, 82, 0.45); }
+    }
+
+    .story-box {
+      margin-top: 1rem;
+      padding: 1.25rem 1.35rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      display: flex;
+      gap: 0.75rem;
+      align-items: flex-start;
+      transition: border-color 0.3s ease, background 0.3s ease;
+    }
+
+    .story-box .story-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      line-height: 1.3;
+    }
+
+    .story-box .story-text {
+      font-size: 0.95rem;
+      color: var(--text-primary);
+    }
+
+    .story-box.type-success {
+      border-color: var(--success-green);
+      background: var(--story-success-bg);
+    }
+
+    .story-box.type-warning {
+      border-color: var(--warning-gold);
+      background: var(--story-warning-bg);
+    }
+
+    .story-box.type-danger {
+      border-color: var(--danger-red);
+      background: var(--story-danger-bg);
+    }
+
+    .story-box.type-neutral {
+      border-color: var(--border);
+    }
+
+    .demos {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .demos-title {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .demo-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .demo-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 0.45rem 0.85rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, background 0.2s;
+    }
+
+    .demo-btn:hover {
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+      background: var(--demo-hover-bg);
+    }
+
+    .demos-source {
+      margin-top: 0.75rem;
+      font-size: 0.72rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    .demos-source strong {
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+
+    footer {
+      margin-top: 2rem;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body data-theme="dark">
+  <div class="page">
+    <header>
+      <div class="header-top">
+        <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+          <span id="theme-icon">🌙</span>
+          <span id="theme-label">Dark</span>
+        </button>
+      </div>
+      <h1>⚡ THE GRID — Armenia's Energy Mix Simulator</h1>
+      <p>Can Armenia survive without nuclear? · <a href="management.html" style="color:var(--accent-gold)">Play Grid Commander ($1M budget game)</a></p>
+    </header>
+
+    <div class="dashboard">
+      <section class="panel controls">
+        <div class="panel-title">Energy mix controls</div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>☢️ Nuclear</span>
+            <span class="value nuclear" id="nuclear-display">40%</span>
+          </div>
+          <input type="range" id="nuclear-slider" min="0" max="100" value="40" />
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>☀️ Solar &amp; Wind</span>
+            <span class="value solar" id="solar-display">25%</span>
+          </div>
+          <input type="range" id="solar-slider" min="0" max="100" value="25" />
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>💧 Hydro</span>
+            <span class="value hydro" id="hydro-display">10%</span>
+          </div>
+          <input type="range" id="hydro-slider" min="0" max="100" value="10" />
+        </div>
+
+        <div class="slider-group">
+          <div class="slider-label">
+            <span>🛢️ Fossil fuel</span>
+            <span class="value fossil" id="fossil-display">25%</span>
+          </div>
+          <input
+            type="range"
+            id="fossil-slider"
+            class="slider-readonly"
+            min="0"
+            max="100"
+            value="25"
+            tabindex="-1"
+            aria-readonly="true"
+            aria-label="Fossil fuel share (auto-calculated)"
+          />
+          <p class="mix-total">Read-only slider. Auto-calculated: <strong>100% − nuclear − solar − hydro</strong></p>
+        </div>
+
+        <div class="mix-bar" id="mix-bar" aria-hidden="true">
+          <div class="mix-segment nuclear" id="mix-nuclear"></div>
+          <div class="mix-segment solar" id="mix-solar"></div>
+          <div class="mix-segment hydro" id="mix-hydro"></div>
+          <div class="mix-segment fossil" id="mix-fossil"></div>
+        </div>
+        <div class="mix-legend">
+          <span class="leg-nuclear">Nuclear</span>
+          <span class="leg-solar">Solar &amp; wind</span>
+          <span class="leg-hydro">Hydro</span>
+          <span class="leg-fossil">Fossil</span>
+        </div>
+      </section>
+
+      <section class="outputs">
+        <div class="metrics-grid">
+          <div class="metric-card" id="stability-card">
+            <div class="label">Grid stability</div>
+            <div>
+              <span class="number" id="stability-value">—</span><span class="unit">%</span>
+              <span class="status-icon" id="stability-icon"></span>
+            </div>
+          </div>
+          <div class="metric-card" id="co2-card">
+            <div class="label">CO₂ emissions</div>
+            <div>
+              <span class="number" id="co2-value">—</span>
+              <span class="unit">tons/hr</span>
+            </div>
+          </div>
+          <div class="metric-card wide" id="cost-card">
+            <div class="label">Energy cost</div>
+            <div>
+              <span class="number" id="cost-value">—</span>
+              <span class="unit">AMD/kWh</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="story-box type-neutral" id="story-box">
+          <span class="story-icon" id="story-icon">📊</span>
+          <p class="story-text" id="story-text">Adjust sliders to explore Armenia's energy trade-offs.</p>
+        </div>
+      </section>
+    </div>
+
+    <div class="demos">
+      <div class="demos-title">Quick demo scenarios</div>
+      <div class="demo-buttons">
+        <button type="button" class="demo-btn" data-nuclear="29" data-solar="16" data-hydro="21">Armenia today (2025)</button>
+        <button type="button" class="demo-btn" data-nuclear="0" data-solar="70" data-hydro="10">Anti-nuclear mistake</button>
+        <button type="button" class="demo-btn" data-nuclear="55" data-solar="30" data-hydro="10">Optimal future</button>
+        <button type="button" class="demo-btn" data-nuclear="100" data-solar="0" data-hydro="0">100% nuclear (unrealistic)</button>
+      </div>
+      <p class="demos-source">
+        <strong>Armenia today (2025):</strong> Statistical Committee — gas/TPP 33.6%, Metsamor nuclear 29.1%, hydro 21%, solar 16.3%, wind 0.02% (ARKA, Feb 2026).
+      </p>
+    </div>
+
+    <footer>
+      HackAtom Armenia 2026 · Metsamor ~29% of generation (2025) · IAEA lifecycle data
+    </footer>
+  </div>
+
+  <script>
+    // --- INLINED GRID ENGINE LOGIC ---
+    function calculateStability(nuclear, solar, hydro, fossil) {
+      let stability = 30 + nuclear * 0.65 + fossil * 0.3 + hydro * 0.35;
+
+      if (solar > 40) {
+        stability -= (solar - 40) * 1.8;
+      }
+
+      if (nuclear >= 30 && solar > 40) {
+        stability += nuclear * 0.25;
+      }
+
+      if (
+        nuclear >= 50 &&
+        solar >= 20 &&
+        solar <= 45 &&
+        hydro >= 5 &&
+        fossil > 0 &&
+        fossil <= 15
+      ) {
+        stability += 15;
+      }
+
+      return Math.round(Math.max(0, Math.min(100, stability)));
+    }
+
+    function calculateCO2(nuclear, solar, hydro, fossil) {
+      const fossilCO2 = fossil * 0.01 * 650;
+      const solarCO2 = solar * 0.01 * 48;
+      const hydroCO2 = hydro * 0.01 * 24;
+      const nuclearCO2 = nuclear * 0.01 * 12;
+      const totalGCO2perKwh = fossilCO2 + solarCO2 + hydroCO2 + nuclearCO2;
+      return Math.round((totalGCO2perKwh * 970 * 1000) / 1_000_000);
+    }
+
+    function calculateCost(nuclear, solar, hydro, fossil, stability) {
+      let cost =
+        75 - solar * 0.15 - hydro * 0.12 + fossil * 0.3 + nuclear * 0.05;
+
+      if (stability < 80) {
+        cost += (80 - stability) * 2.5;
+      }
+
+      if (stability < 50) {
+        cost *= 1.6;
+      }
+
+      return Math.round(Math.max(40, cost));
+    }
+
+    function calculateGridMetrics(nuclear, solar, hydro = 0) {
+      const fossil = Math.max(0, 100 - nuclear - solar - hydro);
+      const stability = calculateStability(nuclear, solar, hydro, fossil);
+      const co2 = calculateCO2(nuclear, solar, hydro, fossil);
+      const cost = calculateCost(nuclear, solar, hydro, fossil, stability);
+      return { nuclear, solar, hydro, fossil, stability, co2, cost };
+    }
+
+    function isOptimalMix(nuclear, solar, hydro, fossil, stability, co2, cost) {
+      return (
+        nuclear >= 50 &&
+        solar >= 25 &&
+        solar <= 45 &&
+        hydro >= 5 &&
+        fossil > 0 &&
+        fossil <= 15 &&
+        stability >= 80 &&
+        co2 < 150 &&
+        cost <= 105
+      );
+    }
+
+    function getGridStoryMessage(
+      stability,
+      co2,
+      cost,
+      nuclear,
+      solar,
+      hydro,
+      fossil
+    ) {
+      if (stability < 40) {
+        return {
+          icon: "🔴",
+          type: "danger",
+          message:
+            "BLACKOUT IMMINENT. Grid instability has triggered emergency cost spikes. This is what happened to California in 2020.",
+        };
+      }
+
+      if (stability < 60) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message: `Dangerous instability. At ${solar}% solar/wind without enough nuclear backing, rolling blackouts become likely in winter when sun is low.`,
+        };
+      }
+
+      if (nuclear === 0 && solar > 50) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message:
+            "Without nuclear baseload, this grid depends entirely on weather. Armenia's winters would cause frequent blackouts.",
+        };
+      }
+
+      if (nuclear === 100) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message:
+            "100% nuclear is not realistic for Armenia. Real grids need diversification — peaking plants, renewables, and grid flexibility. Metsamor is vital baseload, not a solo solution overnight.",
+        };
+      }
+
+      if (fossil === 0 && nuclear < 100) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message:
+            "0% oil/gas is not realistic. Every operating grid keeps gas or fuel-oil peaking plants for maintenance gaps, drought years, and winter spikes — even with nuclear and hydro.",
+        };
+      }
+
+      if (stability >= 80 && nuclear >= 40 && solar < 20) {
+        return {
+          icon: "⚠️",
+          type: "warning",
+          message: `Stability looks fine (${stability}%) with ${nuclear}% nuclear, but only ${solar}% solar/wind is not a credible plan. Nuclear enables renewables — it does not replace them. Add meaningful solar/wind for a balanced grid.`,
+        };
+      }
+
+      if (isOptimalMix(nuclear, solar, hydro, fossil, stability, co2, cost)) {
+        return {
+          icon: "✅",
+          type: "success",
+          message: `Optimal grid mix. ${nuclear}% nuclear + ${solar}% solar/wind + ${hydro}% hydro + ${fossil}% fossil peaking = ${stability}% stability, ${co2} tons CO₂/hr, ${cost} AMD/kWh. This is the balanced future Armenia should aim for.`,
+        };
+      }
+
+      if (nuclear >= 40 && stability >= 80 && solar >= 20 && fossil > 0) {
+        return {
+          icon: "✅",
+          type: "success",
+          message: `Stable grid. ${nuclear}% nuclear, ${solar}% solar/wind, ${hydro}% hydro, and ${fossil}% fossil peaking work together — reliable, lower carbon, and economically viable.`,
+        };
+      }
+
+      if (co2 > 400) {
+        return {
+          icon: "🌫️",
+          type: "warning",
+          message: `High emissions: ${co2} tons of CO₂/hour. At this rate, Armenia cannot meet its climate commitments.`,
+        };
+      }
+
+      return {
+        icon: "📊",
+        type: "neutral",
+        message: `Current mix produces ${co2} tons CO₂/hr at ${cost} AMD/kWh. Adjust sliders to see Armenia's energy trade-offs.`,
+      };
+    }
+
+    function getStabilityDisplayState(stability, nuclear, solar) {
+      if (stability >= 80 && nuclear >= 40 && solar < 20) return "warning";
+      if (stability > 80) return "good";
+      if (stability >= 60) return "warning";
+      return "danger";
+    }
+
+    function getMetricState(metric, value) {
+      if (metric === "stability") {
+        if (value > 80) return "good";
+        if (value >= 60) return "warning";
+        return "danger";
+      }
+      if (metric === "co2") {
+        if (value < 200) return "good";
+        if (value <= 400) return "warning";
+        return "danger";
+      }
+      if (metric === "cost") {
+        if (value < 100) return "good";
+        if (value <= 150) return "warning";
+        return "danger";
+      }
+      return "neutral";
+    }
+
+    function stabilityStatusIcon(state) {
+      if (state === "good") return "✅";
+      if (state === "warning") return "⚠️";
+      return "🔴";
+    }
+
+    const THEME_KEY = "grid-theme";
+
+    function loadSavedTheme() {
+      try {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved === "dark" || saved === "light") return saved;
+      } catch {
+        /* ignore */
+      }
+      return "dark";
+    }
+
+    function saveTheme(theme) {
+      try {
+        localStorage.setItem(THEME_KEY, theme);
+      } catch {
+        /* ignore */
+      }
+    }
+
+    // --- GAME CONTROLLER LOGIC ---
+    let nuclear = 40;
+    let solar = 25;
+    let hydro = 10;
+
+    const nuclearSlider = document.getElementById("nuclear-slider");
+    const solarSlider = document.getElementById("solar-slider");
+    const hydroSlider = document.getElementById("hydro-slider");
+    const fossilSlider = document.getElementById("fossil-slider");
+    const nuclearDisplay = document.getElementById("nuclear-display");
+    const solarDisplay = document.getElementById("solar-display");
+    const hydroDisplay = document.getElementById("hydro-display");
+    const fossilDisplay = document.getElementById("fossil-display");
+    const stabilityValue = document.getElementById("stability-value");
+    const co2Value = document.getElementById("co2-value");
+    const costValue = document.getElementById("cost-value");
+    const stabilityCard = document.getElementById("stability-card");
+    const co2Card = document.getElementById("co2-card");
+    const costCard = document.getElementById("cost-card");
+    const stabilityIcon = document.getElementById("stability-icon");
+    const storyBox = document.getElementById("story-box");
+    const storyIcon = document.getElementById("story-icon");
+    const storyText = document.getElementById("story-text");
+    const mixNuclear = document.getElementById("mix-nuclear");
+    const mixSolar = document.getElementById("mix-solar");
+    const mixHydro = document.getElementById("mix-hydro");
+    const mixFossil = document.getElementById("mix-fossil");
+    const themeToggle = document.getElementById("theme-toggle");
+    const themeIcon = document.getElementById("theme-icon");
+    const themeLabel = document.getElementById("theme-label");
+
+    function applyTheme(theme) {
+      document.body.setAttribute("data-theme", theme);
+      const isDark = theme === "dark";
+      themeIcon.textContent = isDark ? "🌙" : "☀️";
+      themeLabel.textContent = isDark ? "Dark" : "Light";
+      saveTheme(theme);
+    }
+
+    function toggleTheme() {
+      const current = document.body.getAttribute("data-theme") || "dark";
+      applyTheme(current === "dark" ? "light" : "dark");
+    }
+
+    applyTheme(loadSavedTheme());
+    themeToggle.addEventListener("click", toggleTheme);
+
+    function handleNuclearChange(newVal) {
+      const maxNuclear = 100 - solar - hydro;
+      nuclear = Math.min(Math.max(0, newVal), maxNuclear);
+    }
+
+    function handleSolarChange(newVal) {
+      const maxSolar = 100 - nuclear - hydro;
+      solar = Math.min(Math.max(0, newVal), maxSolar);
+    }
+
+    function handleHydroChange(newVal) {
+      const maxHydro = 100 - nuclear - solar;
+      hydro = Math.min(Math.max(0, newVal), maxHydro);
+    }
+
+    function applyMetricCardState(card, state) {
+      card.classList.remove("state-good", "state-warning", "state-danger");
+      if (state === "good") card.classList.add("state-good");
+      else if (state === "warning") card.classList.add("state-warning");
+      else if (state === "danger") card.classList.add("state-danger");
+    }
+
+    function updateUI() {
+      const metrics = calculateGridMetrics(nuclear, solar, hydro);
+      const story = getGridStoryMessage(
+        metrics.stability,
+        metrics.co2,
+        metrics.cost,
+        metrics.nuclear,
+        metrics.solar,
+        metrics.hydro,
+        metrics.fossil
+      );
+
+      nuclearDisplay.textContent = metrics.nuclear + "%";
+      solarDisplay.textContent = metrics.solar + "%";
+      hydroDisplay.textContent = metrics.hydro + "%";
+      fossilDisplay.textContent = metrics.fossil + "%";
+      nuclearSlider.value = metrics.nuclear;
+      solarSlider.value = metrics.solar;
+      hydroSlider.value = metrics.hydro;
+      fossilSlider.value = metrics.fossil;
+
+      stabilityValue.textContent = metrics.stability;
+      co2Value.textContent = metrics.co2;
+      costValue.textContent = metrics.cost;
+
+      const stabState = getStabilityDisplayState(
+        metrics.stability,
+        metrics.nuclear,
+        metrics.solar
+      );
+      const co2State = getMetricState("co2", metrics.co2);
+      const costState = getMetricState("cost", metrics.cost);
+
+      applyMetricCardState(stabilityCard, stabState);
+      applyMetricCardState(co2Card, co2State);
+      applyMetricCardState(costCard, costState);
+      stabilityIcon.textContent = stabilityStatusIcon(stabState);
+
+      mixNuclear.style.width = metrics.nuclear + "%";
+      mixSolar.style.width = metrics.solar + "%";
+      mixHydro.style.width = metrics.hydro + "%";
+      mixFossil.style.width = metrics.fossil + "%";
+
+      storyBox.className = "story-box type-" + story.type;
+      storyIcon.textContent = story.icon;
+      storyText.textContent = story.message;
+    }
+
+    nuclearSlider.addEventListener("input", (e) => {
+      handleNuclearChange(Number(e.target.value));
+      updateUI();
+    });
+
+    solarSlider.addEventListener("input", (e) => {
+      handleSolarChange(Number(e.target.value));
+      updateUI();
+    });
+
+    hydroSlider.addEventListener("input", (e) => {
+      handleHydroChange(Number(e.target.value));
+      updateUI();
+    });
+
+    document.querySelectorAll(".demo-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        nuclear = Number(btn.dataset.nuclear);
+        solar = Number(btn.dataset.solar);
+        hydro = Number(btn.dataset.hydro);
+        if (nuclear + solar + hydro > 100) {
+          hydro = Math.max(0, 100 - nuclear - solar);
+        }
+        updateUI();
+      });
+    });
+
+    updateUI();
+  </script>
+</body>
+</html>
