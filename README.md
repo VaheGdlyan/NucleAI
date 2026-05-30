@@ -6,6 +6,8 @@
 
 **A grounded AI platform for nuclear energy literacy, powered by document retrieval and deterministic grid simulation.**
 
+### 🏆 Winner of the HackAtom 2026 National Stage 🏆
+
 NucleAI combines a Retrieval-Augmented Generation chatbot grounded in IAEA source documents with an interactive energy-grid simulation engine — enabling evidence-based exploration of nuclear energy, radiation safety, and Armenia's energy future.
 
 ---
@@ -587,6 +589,6 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for the f
 
 <div align="center">
 
-Built for the HackAtom 2026 National Stage · Grounded in IAEA documentation · Open source
+🏆 Winner of the HackAtom 2026 National Stage · Grounded in IAEA documentation · Open source
 
 </div>
